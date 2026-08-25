@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guilherme Medeiros Ellena</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fcfcfb;
+    --card: #ffffff;
+    --ink: #0b0b0b;
+    --ink-secondary: #52514e;
+    --ink-muted: #898781;
+    --border: rgba(11,11,11,0.10);
+    --blue: #2a78d6;
+    --orange: #eb6834;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111110;
+      --card: #1a1a19;
+      --ink: #ffffff;
+      --ink-secondary: #c3c2b7;
+      --ink-muted: #898781;
+      --border: rgba(255,255,255,0.12);
+      --blue: #3987e5;
+      --orange: #d95926;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px 64px;
+  }
+  main {
+    width: 100%;
+    max-width: 560px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .avatar-ring {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--orange));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .avatar-ring span {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--blue);
+  }
+  h1 {
+    font-size: 24px;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .role {
+    font-size: 15px;
+    color: var(--ink-secondary);
+    margin: 0 0 4px;
+  }
+  .affil {
+    font-size: 14px;
+    color: var(--ink-muted);
+    margin: 0;
+  }
+  .bio {
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--ink-secondary);
+    text-align: center;
+    margin: 20px auto 0;
+    max-width: 460px;
+  }
+  section {
+    margin-top: 36px;
+  }
+  .section-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin: 0 0 12px 4px;
+  }
+  .links {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  a.link-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 15px 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    text-decoration: none;
+    color: var(--ink);
+    transition: transform 0.12s ease, border-color 0.12s ease;
+  }
+  a.link-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--blue);
+  }
+  .icon {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    background: color-mix(in srgb, var(--blue) 12%, transparent);
+    color: var(--blue);
+  }
+  .icon.orange {
+    background: color-mix(in srgb, var(--orange) 14%, transparent);
+    color: var(--orange);
+  }
+  .link-text { flex: 1; min-width: 0; }
+  .link-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+  }
+  .link-sub {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin: 2px 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .arrow {
+    flex: 0 0 auto;
+    color: var(--ink-muted);
+    font-size: 16px;
+  }
+  .articles {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  a.article-card {
+    display: block;
+    padding: 12px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  a.article-card:hover { border-color: var(--orange); }
+  .article-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 3px;
+  }
+  .article-meta {
+    font-size: 12.5px;
+    color: var(--ink-muted);
+    margin: 0;
+  }
+  footer {
+    margin-top: 44px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--ink-muted);
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <header>
+    <div class="avatar-ring"><span>GE</span></div>
+    <h1>Guilherme Medeiros Ellena</h1>
+    <p class="role">Iniciação Científica — Efeito Elastocalórico em Nanotubos de Carbono</p>
+    <p class="affil">IFGW · Unicamp</p>
+    <p class="bio">
+      Simulações de Dinâmica Molecular (LAMMPS) de um ciclo Otto elastocalórico
+      em nanotubos de carbono, investigando seu uso como refrigeradores em
+      estado sólido na nanoescala. Orientação: Prof. Dr. Alexandre Fontes da Fonseca.
+    </p>
+  </header>
+
+  <section>
+    <p class="section-label">Contato</p>
+    <div class="links">
+      <a class="link-card" href="mailto:g256774@dac.unicamp.br">
+        <div class="icon">✉</div>
+        <div class="link-text">
+          <p class="link-title">E-mail</p>
+          <p class="link-sub">g256774@dac.unicamp.br</p>
+        </div>
+        <div class="arrow">↗</div>
+      </a>
+      <a class="link-card" href="#" data-placeholder="linkedin">
+        <div class="icon">in</div>
+        <div class="link-text">
+          <p class="link-title">LinkedIn</p>
+          <p class="link-sub">adicione seu link aqui</p>
+        </div>
+        <div class="arrow">↗</div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-label">Congresso de Iniciação Científica</p>
+    <div class="links">
+      <a class="link-card" href="files/resumo-congresso-ic-2026.pdf">
+        <div class="icon orange">📄</div>
+        <div class="link-text">
+          <p class="link-title">Resumo — XXXIV Congresso IC Unicamp 2026</p>
+          <p class="link-sub">PDF · Efeito Elastocalórico em Nanotubos de Carbono</p>
+        </div>
+        <div class="arrow">↗</div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-label">Artigos de referência</p>
+    <div class="articles">
+      <a class="article-card" href="https://doi.org/10.1103/PhysRevB.106.165413">
+        <p class="article-title">Silva &amp; Fonseca — High performance of carbon nanotube elastocaloric refrigerators over a large temperature span</p>
+        <p class="article-meta">Phys. Rev. B 106, 165413 (2022)</p>
+      </a>
+      <a class="article-card" href="https://doi.org/10.1002/andp.201800502">
+        <p class="article-title">Cantuário &amp; Fonseca — High performance of carbon nanotube refrigerators</p>
+        <p class="article-meta">Ann. Phys. (Berlin) 531, 1800502 (2019)</p>
+      </a>
+      <a class="article-card" href="https://doi.org/10.1021/acs.nanolett.6b03155">
+        <p class="article-title">Lisenkov et al. — Elastocaloric effect in carbon nanotubes and graphene</p>
+        <p class="article-meta">Nano Lett. 16, 7008–7012 (2016)</p>
+      </a>
+      <a class="article-card" href="https://doi.org/10.1557/mrs.2018.67">
+        <p class="article-title">Frenzel et al. — High-performance elastocaloric materials for the engineering of bulk- and micro-cooling devices</p>
+        <p class="article-meta">MRS Bulletin 43, 280 (2018)</p>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    Instituto de Física "Gleb Wataghin" — Unicamp
+  </footer>
+
+</main>
+</body>
+</html>
