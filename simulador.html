@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e16">
+<title>Estique o nanotubo</title>
+<meta name="description" content="Simulador interativo: estique um nanotubo de carbono com os dedos e veja ele esfriar, ou rode o ciclo de refrigeração.">
+<style>
+  /* Visual único e escuro de propósito: instrumento de laboratório, para o brilho frio/quente aparecer */
+  :root {
+    color-scheme: dark;
+    --bg: #0a0e16;
+    --bg-2: #101624;
+    --painel: #121a2a;
+    --linha: rgba(255,255,255,0.09);
+    --ink: #eef1f7;
+    --ink-2: #b4bccb;
+    --mudo: #7d879a;
+    --frio: #4d9dff;
+    --quente: #ff7a3d;
+    --neutro: #cdd4e0;
+    --metal: #dfe3ea;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    overscroll-behavior: none;
+  }
+  .app {
+    height: 100%; display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* topo */
+  .topo {
+    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+    padding: 10px max(14px, env(safe-area-inset-right, 0px)) 8px max(14px, env(safe-area-inset-left, 0px));
+  }
+  .voltar, .info-btn {
+    height: 36px; min-width: 36px; padding: 0 12px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    background: var(--bg-2); border: 1px solid var(--linha); color: var(--ink-2);
+    font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer;
+  }
+  .info-btn { padding: 0; width: 36px; font-size: 16px; }
+  .titulo { text-align: center; line-height: 1.15; min-width: 0; }
+  .titulo h1 { margin: 0; font-size: 17px; font-weight: 750; letter-spacing: -0.01em; }
+  .titulo p { margin: 2px 0 0; font-size: 12px; color: var(--mudo); }
+
+  /* palco */
+  .palco { position: relative; min-height: 0; overflow: hidden;
+    background: radial-gradient(120% 80% at 50% 45%, #141d30 0%, var(--bg) 70%); }
+  #cena { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; display: block; }
+  #cena.agarrando { cursor: grabbing; }
+
+  .leitura {
+    position: absolute; left: max(14px, env(safe-area-inset-left, 0px)); top: 10px;
+    display: grid; gap: 2px; pointer-events: none;
+    font-variant-numeric: tabular-nums;
+  }
+  .leitura .rot { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mudo); font-weight: 700; }
+  .leitura .temp { font-family: var(--mono); font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
+  .leitura .delta { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--ink-2); }
+  .leitura .eps { font-family: var(--mono); font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+
+  .termo {
+    position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); top: 14px; bottom: 54px;
+    width: 10px; border-radius: 999px; pointer-events: none;
+    background: linear-gradient(to top, var(--frio), #8e9bb3 27%, #8e9bb3 30%, var(--quente));
+    opacity: 0.85;
+  }
+  .termo i { position: absolute; left: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
+    background: var(--ink); border: 3px solid var(--bg); box-shadow: 0 0 0 2px var(--ink); transition: background 0.2s; }
+  .termo b { position: absolute; right: 16px; font-size: 10px; color: var(--mudo); font-family: var(--mono); font-weight: 600; transform: translateY(-50%); white-space: nowrap; }
+
+  .dica {
+    position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+    max-width: calc(100% - 28px); width: max-content;
+    padding: 8px 14px; border-radius: 999px; background: rgba(18,26,42,0.88); border: 1px solid var(--linha);
+    font-size: 13.5px; font-weight: 600; color: var(--ink); text-align: center; pointer-events: none;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .dica.frio { color: var(--frio); border-color: color-mix(in srgb, var(--frio) 45%, transparent); }
+  .dica.quente { color: var(--quente); border-color: color-mix(in srgb, var(--quente) 45%, transparent); }
+
+  /* painel */
+  .painel {
+    background: var(--painel); border-top: 1px solid var(--linha); border-radius: 18px 18px 0 0;
+    padding: 12px max(14px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+    display: grid; gap: 12px;
+  }
+  .modos { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--bg); border-radius: 12px; border: 1px solid var(--linha); }
+  .modos button {
+    font: inherit; font-size: 14px; font-weight: 700; padding: 9px 6px; border: 0; border-radius: 9px;
+    background: transparent; color: var(--mudo); cursor: pointer;
+  }
+  .modos button[aria-selected="true"] { background: var(--bg-2); color: var(--ink); box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset; }
+
+  .linha-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+  .bloco { background: var(--bg); border: 1px solid var(--linha); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+  .bloco h2 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mudo); font-weight: 700; }
+
+  .controle { display: grid; gap: 8px; }
+  .controle label { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-2); }
+  .controle output { font-family: var(--mono); color: var(--ink); font-weight: 700; }
+  input[type="range"] { width: 100%; accent-color: var(--frio); height: 28px; margin: 0; }
+  .controle p { margin: 0; font-size: 12.5px; color: var(--mudo); line-height: 1.45; }
+
+  .etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .etapas li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; align-items: center; padding: 5px 6px; border-radius: 8px; color: var(--mudo); font-size: 12.5px; transition: background 0.2s, color 0.2s; }
+  .etapas li .n { font-family: var(--mono); font-weight: 700; font-size: 12px; }
+  .etapas li b { color: inherit; font-weight: 700; }
+  .etapas li.ativa { background: var(--bg-2); color: var(--ink); }
+  .etapas li.ativa.frio .n { color: var(--frio); }
+  .etapas li.ativa.quente .n { color: var(--quente); }
+  .acoes-ciclo { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+  .botao {
+    font: inherit; font-size: 14px; font-weight: 750; padding: 10px 16px; border-radius: 10px; cursor: pointer;
+    border: 0; color: #0a0e16; background: linear-gradient(135deg, var(--frio), #8fc0ff);
+  }
+  .botao.pausar { background: linear-gradient(135deg, var(--quente), #ffb08a); }
+  .contador { font-size: 12.5px; color: var(--mudo); font-variant-numeric: tabular-nums; }
+
+  #plot { width: 100%; height: 118px; display: block; }
+  .legenda-plot { margin: 4px 0 0; font-size: 11.5px; color: var(--mudo); line-height: 1.35; }
+
+  :focus-visible { outline: 2px solid var(--frio); outline-offset: 2px; }
+
+  /* folha de informação */
+  .folha {
+    position: fixed; inset: 0; z-index: 20; display: grid; align-items: end; justify-items: center;
+    background: rgba(4,6,10,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  .folha[hidden] { display: none; }
+  .folha .cartao {
+    width: min(620px, 100%); max-height: 86vh; overflow: auto; background: var(--painel);
+    border: 1px solid var(--linha); border-radius: 18px 18px 0 0;
+    padding: 20px max(20px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
+    display: grid; gap: 12px; font-size: 15px; line-height: 1.55; color: var(--ink-2);
+  }
+  .folha h2 { margin: 0; color: var(--ink); font-size: 19px; }
+  .folha h3 { margin: 6px 0 0; color: var(--ink); font-size: 15px; }
+  .folha p { margin: 0; }
+  .folha b { color: var(--ink); }
+  .folha .f { color: var(--frio); font-weight: 700; } .folha .q { color: var(--quente); font-weight: 700; }
+  .folha .fechar { justify-self: end; }
+  .folha a { color: var(--frio); }
+
+  @media (min-width: 900px) {
+    .app { grid-template-columns: minmax(0, 1fr) 380px; grid-template-rows: auto minmax(0, 1fr); }
+    .topo { grid-column: 1 / -1; }
+    .painel { grid-column: 2; grid-row: 2; border-radius: 18px 0 0 0; border-top: 0; border-left: 1px solid var(--linha); align-content: start; overflow: auto; }
+    .linha-2 { grid-template-columns: minmax(0, 1fr); }
+    #plot { height: 170px; }
+    .folha { align-items: center; }
+    .folha .cartao { border-radius: 18px; }
+  }
+  @media (max-height: 640px) and (max-width: 899px) {
+    #plot { height: 92px; }
+    .controle p { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topo">
+    <a class="voltar" href="./" aria-label="Voltar para a página de links">← Links</a>
+    <div class="titulo">
+      <h1>Estique o nanotubo</h1>
+      <p>nanotubo de carbono (6,6) · 504 átomos</p>
+    </div>
+    <button class="info-btn" id="infoBtn" type="button" aria-haspopup="dialog" aria-controls="folha" aria-label="O que é isto?">?</button>
+  </header>
+
+  <main class="palco" id="palco">
+    <canvas id="cena" aria-label="Nanotubo de carbono em 3D. Arraste as pontas ou use dois dedos para esticar; arraste o meio para girar."></canvas>
+    <div class="leitura" aria-live="off">
+      <span class="rot">Temperatura</span>
+      <span class="temp" id="tTemp">300,0 K</span>
+      <span class="delta" id="tDelta">ΔT 0,0 K</span>
+      <span class="eps" id="tEps">esticado 0,0 %</span>
+    </div>
+    <div class="termo" aria-hidden="true"><b style="top:0%">+8 K</b><b id="marca300" style="top:72%">300 K</b><b style="top:100%">−3 K</b><i id="termoPonto" style="top:72%"></i></div>
+    <div class="dica" id="dica" role="status">Puxe as pontas para esticar</div>
+  </main>
+
+  <section class="painel" aria-label="Controles">
+    <div class="modos" role="tablist" aria-label="Modo">
+      <button type="button" role="tab" id="abaMao" aria-selected="true" aria-controls="painelMao">Com as mãos</button>
+      <button type="button" role="tab" id="abaCiclo" aria-selected="false" aria-controls="painelCiclo">Ciclo geladeira</button>
+    </div>
+
+    <div class="linha-2">
+      <div class="bloco" id="painelMao" role="tabpanel" aria-labelledby="abaMao">
+        <h2>Esticar</h2>
+        <div class="controle">
+          <label for="deform">Deformação <output id="deformOut" for="deform">0,0 %</output></label>
+          <input type="range" id="deform" min="0" max="100" step="1" value="0" aria-describedby="deformDica">
+          <p id="deformDica">Puxe rápido e ele esfria. Segure: ele recupera calor do ambiente. Solte: ele volta e esquenta.</p>
+        </div>
+      </div>
+
+      <div class="bloco" id="painelCiclo" role="tabpanel" aria-labelledby="abaCiclo" hidden>
+        <h2>Ciclo de refrigeração</h2>
+        <ol class="etapas" id="etapas">
+          <li class="frio"><span class="n">1→2</span><span><b>Estica rápido:</b> esfria</span></li>
+          <li class="frio"><span class="n">2→3</span><span><b>Absorve calor</b> do que se quer gelar</span></li>
+          <li class="quente"><span class="n">3→4</span><span><b>Solta rápido:</b> esquenta</span></li>
+          <li class="quente"><span class="n">4→1</span><span><b>Joga o calor fora</b> no ambiente</span></li>
+        </ol>
+        <div class="acoes-ciclo">
+          <button type="button" class="botao" id="btCiclo">Rodar o ciclo</button>
+          <span class="contador" id="contador">0 ciclos</span>
+        </div>
+      </div>
+
+      <div class="bloco">
+        <h2>Temperatura × deformação</h2>
+        <canvas id="plot" aria-label="Gráfico da temperatura em função da deformação"></canvas>
+        <p class="legenda-plot" id="legPlot">O rastro mostra o caminho do nanotubo. No ciclo, ele desenha uma volta fechada.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="folha" id="folha" role="dialog" aria-modal="true" aria-labelledby="folhaTitulo" hidden>
+  <div class="cartao">
+    <h2 id="folhaTitulo">O que você está vendo</h2>
+    <p>Um <b>nanotubo de carbono</b>: uma folha de átomos de carbono, com um átomo de espessura, enrolada como um canudo. Este tem a geometria real do que estudei na Iniciação Científica: <b>504 átomos</b>, 5,1 nm de comprimento e 0,81 nm de diâmetro, cerca de cem mil vezes mais fino que um fio de cabelo.</p>
+    <h3>O efeito elastocalórico</h3>
+    <p>Quando você estica um elástico rápido, ele esquenta. O nanotubo faz o contrário: <span class="f">esfria quando é esticado</span> e <span class="q">esquenta quando volta</span>. Rápido é a palavra-chave: se você esticar devagar, ele tem tempo de trocar calor com o ambiente e quase não esfria.</p>
+    <h3>A geladeira de nanotubo</h3>
+    <p>No modo <b>Ciclo geladeira</b>, o nanotubo repete quatro passos: estica e esfria, absorve calor do que se quer resfriar, solta e esquenta, joga esse calor fora. É o princípio de uma geladeira comum, trocando o gás pelo nanotubo, sem gases que aquecem o planeta.</p>
+    <h3>Quanto disso é real?</h3>
+    <p>A geometria é real. As temperaturas seguem um <b>modelo simplificado</b>, calibrado pelas médias das 9 simulações de dinâmica molecular do projeto: esticar 10 % rapidamente esfria <span class="f">2,8 K</span>, e contrair aquece <span class="q">8,0 K</span>. As cores e a agitação dos átomos estão exageradas para ficarem visíveis. As simulações de verdade calculam as forças entre todos os átomos (programa LAMMPS, potencial AIREBO) e levam cerca de 2 horas de computador por ciclo; esta página só ilustra o resultado.</p>
+    <p>Projeto de Iniciação Científica no IFGW/Unicamp, orientado pelo Prof. Dr. Alexandre Fontes da Fonseca. <a href="files/resumo-congresso-ic-2026.pdf">Ler o resumo (PDF)</a>.</p>
+    <button type="button" class="voltar fechar" id="fecharFolha">Fechar</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------------- modelo (calibrado pelas médias das 9 simulações) ----------------
+  const T0 = 300;              // K, temperatura do ambiente/reservatório
+  const EPS_MAX = 0.10;        // 10 % de deformação, como no estudo
+  const BETA = 54, GAMMA = 26; // K por unidade de deformação: esticar 10 % → −2,8 K; contrair 10 % → +8,0 K
+  const TAU_MAO = 2.6;         // s, troca de calor com o ambiente no modo livre
+  const TAU_TROCA = 0.42;      // s, troca de calor nas etapas isostrain do ciclo
+  const POISSON = 0.19;
+  const reduzMovimento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------------- geometria real do CNT (6,6) armchair: 21 células, 504 átomos ----------------
+  const A = 2.46, N = 6, M = 6, NCEL = 21, S3 = Math.sqrt(3);
+  const a1 = [A * S3 / 2, A / 2], a2 = [A * S3 / 2, -A / 2];
+  const Cv = [N * a1[0] + M * a2[0], N * a1[1] + M * a2[1]], Cl = Math.hypot(Cv[0], Cv[1]);
+  const Tv = [a1[0] - a2[0], a1[1] - a2[1]], Tl = Math.hypot(Tv[0], Tv[1]);
+  const L0 = NCEL * Tl, R0 = Cl / (2 * Math.PI);
+  const base = [[0, 0], [(a1[0] + a2[0]) / 3, (a1[1] + a2[1]) / 3]];
+  const ax = [], ay = [], az = [];
+  for (let i = -60; i <= 60; i++) for (let j = -60; j <= 60; j++) for (const b of base) {
+    const px = i * a1[0] + j * a2[0] + b[0], py = i * a1[1] + j * a2[1] + b[1];
+    const u = (px * Cv[0] + py * Cv[1]) / (Cl * Cl), v = (px * Tv[0] + py * Tv[1]) / Tl;
+    if (u >= -1e-6 && u < 1 - 1e-6 && v >= -1e-6 && v < L0 - 1e-6) {
+      const th = 2 * Math.PI * u;
+      ax.push(R0 * Math.cos(th)); ay.push(R0 * Math.sin(th)); az.push(v - L0 / 2);
+    }
+  }
+  const NAT = ax.length; // 504
+  const ligA = [], ligB = [];
+  for (let i = 0; i < NAT; i++) for (let j = i + 1; j < NAT; j++) {
+    const d = Math.hypot(ax[i] - ax[j], ay[i] - ay[j], az[i] - az[j]);
+    if (d < 1.6) { ligA.push(i); ligB.push(j); }
+  }
+  const NLIG = ligA.length;
+  // fase e frequência da agitação térmica de cada átomo (só visual)
+  const fase = new Float32Array(NAT * 3), freq = new Float32Array(NAT * 3);
+  for (let k = 0; k < NAT * 3; k++) { fase[k] = Math.random() * 6.283; freq[k] = 9 + Math.random() * 9; }
+
+  // ---------------- estado ----------------
+  const S = {
+    modo: 'mao', eps: 0, epsModelo: 0, T: T0, phi: 0.35, giro: reduzMovimento ? 0 : 0.28, giroUser: 0,
+    volta: false, ciclo: { rodando: false, etapa: 0, t: 0, n: 0 }, tempo: 0,
+    taxa: 0, picoTaxa: 0, ultimaMsg: '',
+  };
+  const rastro = []; // {e, T}
+  const particulas = [];
+
+  // ---------------- elementos ----------------
+  const $ = id => document.getElementById(id);
+  const palco = $('palco'), cena = $('cena'), ctx = cena.getContext('2d');
+  const plot = $('plot'), pctx = plot.getContext('2d');
+  const tTemp = $('tTemp'), tDelta = $('tDelta'), tEps = $('tEps'), dica = $('dica');
+  const termoPonto = $('termoPonto'), deform = $('deform'), deformOut = $('deformOut');
+  const etapasLi = Array.from($('etapas').children), btCiclo = $('btCiclo'), contador = $('contador');
+  const fmt = (x, d = 1) => x.toFixed(d).replace('.', ',').replace('-', '−');
+
+  // ---------------- cores ----------------
+  const NEUTRO = [205, 212, 224], FRIO = [77, 157, 255], QUENTE = [255, 122, 61];
+  function corPorDT(dT) {
+    let c, k;
+    if (dT < 0) { k = Math.min(1, -dT / 2.8); c = FRIO; } else { k = Math.min(1, dT / 8); c = QUENTE; }
+    k = Math.pow(k, 0.8);
+    return [0, 1, 2].map(i => Math.round(NEUTRO[i] + (c[i] - NEUTRO[i]) * k));
+  }
+  // esferas pré-renderizadas por nível de temperatura
+  const NIV = 48, sprites = [];
+  function nivelDe(dT) { const x = (dT + 3) / 11; return Math.max(0, Math.min(NIV - 1, Math.round(x * (NIV - 1)))); }
+  function dTdoNivel(n) { return n / (NIV - 1) * 11 - 3; }
+  function criaSprites() {
+    sprites.length = 0;
+    for (let n = 0; n < NIV; n++) {
+      const [r, g, b] = corPorDT(dTdoNivel(n));
+      const c = document.createElement('canvas'); c.width = c.height = 64;
+      const g2 = c.getContext('2d');
+      const gr = g2.createRadialGradient(24, 22, 3, 32, 32, 31);
+      gr.addColorStop(0, `rgb(${Math.min(255, r + 90)},${Math.min(255, g + 90)},${Math.min(255, b + 90)})`);
+      gr.addColorStop(0.35, `rgb(${r},${g},${b})`);
+      gr.addColorStop(1, `rgb(${Math.round(r * 0.32)},${Math.round(g * 0.32)},${Math.round(b * 0.38)})`);
+      g2.fillStyle = gr; g2.beginPath(); g2.arc(32, 32, 31, 0, 6.2832); g2.fill();
+      sprites.push(c);
+    }
+  }
+  criaSprites();
+
+  // ---------------- tela ----------------
+  let W = 0, H = 0, dpr = 1, vertical = true, esc = 10, cx = 0, cy = 0;
+  const D_CAM = 150, YAW = 0.30, PITCH = 0.10;
+  const cY = Math.cos(YAW), sY = Math.sin(YAW), cP = Math.cos(PITCH), sP = Math.sin(PITCH);
+  function redimensiona() {
+    const r = palco.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    cena.width = Math.round(W * dpr); cena.height = Math.round(H * dpr);
+    vertical = H > W * 1.05;
+    const longo = vertical ? H : W, curto = vertical ? W : H;
+    const margemLongo = vertical ? 120 : 220;
+    esc = Math.min((longo - margemLongo) / (L0 * (1 + EPS_MAX) * cY + 2 * R0 * sY + 4),
+                   (curto * 0.42) / (2 * R0));
+    cx = W / 2; cy = vertical ? H * 0.5 + 6 : H * 0.52;
+    const pr = plot.getBoundingClientRect();
+    plot.width = Math.round(pr.width * dpr); plot.height = Math.round(pr.height * dpr);
+  }
+  window.addEventListener('resize', redimensiona);
+
+  // projeção: coordenadas do tubo (x, y, z ao longo do eixo) → tela
+  const PX = new Float32Array(NAT), PY = new Float32Array(NAT), PD = new Float32Array(NAT), PF = new Float32Array(NAT);
+  function projeta(x, y, z, out) {
+    const c = Math.cos(S.phi), s = Math.sin(S.phi);
+    const xs = x * c - y * s, ys = x * s + y * c;
+    const h = z * cY + ys * sY, d = -z * sY + ys * cY;
+    const v = xs * cP - d * sP, d2 = xs * sP + d * cP;
+    const f = D_CAM / (D_CAM + d2);
+    const hx = h * f * esc, vy = v * f * esc;
+    if (vertical) { out[0] = cx + vy; out[1] = cy - hx; } else { out[0] = cx + hx; out[1] = cy + vy; }
+    out[2] = d2; out[3] = f;
+  }
+
+  // ---------------- interação ----------------
+  const ponteiros = new Map();
+  let gesto = null; // {tipo:'ponta'|'pinca'|'girar', ...}
+  const tmp = [0, 0, 0, 0];
+  function pontaTela(sinal) {
+    const z = sinal * (L0 / 2 + 1.6) * (1 + S.eps);
+    projeta(0, 0, z, tmp); return [tmp[0], tmp[1]];
+  }
+  function eixoTela() {
+    const p = pontaTela(1), q = pontaTela(-1);
+    const mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2;
+    const dx = p[0] - q[0], dy = p[1] - q[1], len = Math.hypot(dx, dy) || 1;
+    return { mx, my, ux: dx / len, uy: dy / len, meio: len / 2 };
+  }
+  const limita = e => Math.max(0, Math.min(EPS_MAX, e));
+  let vibrou = false;
+
+  cena.addEventListener('pointerdown', e => {
+    cena.setPointerCapture(e.pointerId);
+    ponteiros.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+    cena.classList.add('agarrando');
+    if (S.modo !== 'mao') { gesto = { tipo: 'girar', x: e.offsetX, y: e.offsetY }; return; }
+    S.volta = false;
+    if (ponteiros.size === 2) {
+      const [a, b] = Array.from(ponteiros.values());
+      gesto = { tipo: 'pinca', d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, e0: S.eps };
+      return;
+    }
+    const ex = eixoTela();
+    const ao = (e.offsetX - ex.mx) * ex.ux + (e.offsetY - ex.my) * ex.uy;
+    const per = Math.abs(-(e.offsetX - ex.mx) * ex.uy + (e.offsetY - ex.my) * ex.ux);
+    const meio0 = ex.meio / (1 + S.eps);
+    if (Math.abs(ao) > ex.meio * 0.45 && per < 110) {
+      const sinal = Math.sign(ao) || 1;
+      gesto = { tipo: 'ponta', sinal, meio0, desloc: (sinal * ao) / meio0 - (1 + S.eps) };
+    } else {
+      gesto = { tipo: 'girar', x: e.offsetX, y: e.offsetY };
+    }
+  });
+  cena.addEventListener('pointermove', e => {
+    if (!ponteiros.has(e.pointerId)) return;
+    const ant = ponteiros.get(e.pointerId);
+    ponteiros.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+    if (!gesto) return;
+    if (gesto.tipo === 'pinca' && ponteiros.size >= 2) {
+      const [a, b] = Array.from(ponteiros.values());
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      defineEps(limita((1 + gesto.e0) * d / gesto.d0 - 1));
+    } else if (gesto.tipo === 'ponta') {
+      const ex = eixoTela();
+      const ao = (e.offsetX - ex.mx) * ex.ux + (e.offsetY - ex.my) * ex.uy;
+      defineEps(limita((gesto.sinal * ao) / gesto.meio0 - 1 - gesto.desloc));
+    } else if (gesto.tipo === 'girar') {
+      const dx = e.offsetX - ant.x, dy = e.offsetY - ant.y;
+      const dp = (vertical ? dx : -dy) * 0.012;
+      S.phi += dp; S.giroUser = dp * 60;
+    }
+  });
+  function soltou(e) {
+    if (!ponteiros.has(e.pointerId)) return;
+    ponteiros.delete(e.pointerId);
+    if (ponteiros.size === 0) {
+      cena.classList.remove('agarrando');
+      if (gesto && gesto.tipo !== 'girar' && S.modo === 'mao') S.volta = true;
+      gesto = null; vibrou = false;
+    } else if (gesto && gesto.tipo === 'pinca') {
+      gesto = null;
+    }
+  }
+  cena.addEventListener('pointerup', soltou);
+  cena.addEventListener('pointercancel', soltou);
+  cena.addEventListener('lostpointercapture', soltou);
+
+  function defineEps(e) {
+    S.eps = e;
+    if (e >= EPS_MAX - 1e-4 && !vibrou) { vibrou = true; try { navigator.vibrate && navigator.vibrate(12); } catch (_) {} }
+    if (e < EPS_MAX - 0.01) vibrou = false;
+  }
+
+  deform.addEventListener('input', () => { if (S.modo !== 'mao') return; S.volta = false; defineEps(limita(deform.value / 1000)); });
+  deform.addEventListener('change', () => { /* o controle deslizante segura a deformação; não volta sozinho */ });
+
+  // ---------------- modos ----------------
+  const abaMao = $('abaMao'), abaCiclo = $('abaCiclo');
+  function trocaModo(m) {
+    S.modo = m;
+    abaMao.setAttribute('aria-selected', String(m === 'mao'));
+    abaCiclo.setAttribute('aria-selected', String(m === 'ciclo'));
+    $('painelMao').hidden = m !== 'mao';
+    $('painelCiclo').hidden = m !== 'ciclo';
+    rastro.length = 0;
+    if (m === 'mao') { paraCiclo(); S.volta = true; }
+    else {
+      S.volta = false; gesto = null;
+      S.eps = 0; S.epsModelo = 0; S.T = T0;
+      S.ciclo.etapa = 0; S.ciclo.t = 0; S.ciclo.inicioEps = 0;
+      iniciaCiclo();
+    }
+  }
+  abaMao.addEventListener('click', () => trocaModo('mao'));
+  abaCiclo.addEventListener('click', () => trocaModo('ciclo'));
+  [abaMao, abaCiclo].forEach((b, i, arr) => b.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const o = arr[1 - i]; o.focus(); o.click(); }
+  }));
+
+  // ---------------- ciclo ----------------
+  const ETAPAS = [
+    { dur: 1.7, de: 0, ate: EPS_MAX, troca: null, msg: 'Estica rápido: sem tempo de trocar calor, ele esfria', cls: 'frio' },
+    { dur: 2.3, de: EPS_MAX, ate: EPS_MAX, troca: 'entra', msg: 'Travado esticado, absorve calor do que queremos gelar', cls: 'frio' },
+    { dur: 1.7, de: EPS_MAX, ate: 0, troca: null, msg: 'Solta rápido: ele esquenta', cls: 'quente' },
+    { dur: 2.3, de: 0, ate: 0, troca: 'sai', msg: 'Joga o calor fora no ambiente e recomeça', cls: 'quente' },
+  ];
+  function iniciaCiclo() {
+    S.ciclo.rodando = true;
+    btCiclo.textContent = 'Pausar'; btCiclo.classList.add('pausar');
+  }
+  function paraCiclo() {
+    S.ciclo.rodando = false; btCiclo.textContent = 'Continuar'; btCiclo.classList.remove('pausar');
+  }
+  btCiclo.addEventListener('click', () => { S.ciclo.rodando ? paraCiclo() : iniciaCiclo(); });
+  const suave = x => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+
+  // ---------------- partículas de calor ----------------
+  function emitePart(sentido) {
+    const ex = eixoTela();
+    const t = (Math.random() * 2 - 1) * ex.meio * 0.85;
+    const lado = Math.random() < 0.5 ? -1 : 1;
+    const nx = -ex.uy * lado, ny = ex.ux * lado;
+    const raio = R0 * esc * 1.05;
+    const longe = raio + 70 + Math.random() * 40;
+    const bx = ex.mx + ex.ux * t, by = ex.my + ex.uy * t;
+    particulas.push({ bx, by, nx, ny, r0: sentido === 'entra' ? longe : raio, r1: sentido === 'entra' ? raio : longe,
+      t: 0, dur: 0.9 + Math.random() * 0.4, cor: sentido === 'entra' ? 'frio' : 'quente' });
+  }
+
+  // ---------------- laço principal ----------------
+  let ultimo = performance.now(), acumuladorPart = 0, rodando = true;
+  function passo(agora) {
+    if (!rodando) return;
+    const dt = Math.min(0.05, (agora - ultimo) / 1000); ultimo = agora;
+    S.tempo += dt;
+    let tau = TAU_MAO, troca = null;
+
+    if (S.modo === 'mao') {
+      if (S.volta && !gesto) {
+        S.eps = Math.max(0, S.eps - dt * 0.22);
+        if (S.eps === 0) S.volta = false;
+      }
+    } else if (S.ciclo.rodando) {
+      const et = ETAPAS[S.ciclo.etapa];
+      S.ciclo.t += dt;
+      const k = Math.min(1, S.ciclo.t / et.dur);
+      const de = S.ciclo.etapa === 0 && S.ciclo.inicioEps !== undefined ? S.ciclo.inicioEps : et.de;
+      S.eps = de + (et.ate - de) * suave(k);
+      troca = et.troca;
+      tau = troca ? TAU_TROCA : Infinity;
+      etapasLi.forEach((li, i) => li.classList.toggle('ativa', i === S.ciclo.etapa));
+      if (k >= 1) {
+        if (S.ciclo.etapa === 3) { S.ciclo.n++; contador.textContent = S.ciclo.n + (S.ciclo.n === 1 ? ' ciclo' : ' ciclos'); }
+        S.ciclo.etapa = (S.ciclo.etapa + 1) % 4; S.ciclo.t = 0; S.ciclo.inicioEps = undefined;
+      }
+    } else {
+      tau = TAU_MAO;
+    }
+
+    // termodinâmica do modelo: parte adiabática + troca de calor com o ambiente
+    // variação desde o último passo do modelo (inclui o que o dedo mexeu entre quadros)
+    const dE = S.eps - S.epsModelo;
+    S.epsModelo = S.eps;
+    S.T += -BETA * dE + GAMMA * Math.abs(dE);
+    if (isFinite(tau)) S.T += (T0 - S.T) * (1 - Math.exp(-dt / tau));
+    S.taxa = S.taxa * 0.85 + (dE / Math.max(dt, 1e-3)) * 0.15;
+    // velocidade de pico do estiramento atual: decide entre "rápido" e "devagar"
+    if (S.taxa > S.picoTaxa) S.picoTaxa = S.taxa;
+    if (S.eps < 0.002 && S.taxa <= 0) S.picoTaxa = 0;
+
+    if (!gesto || gesto.tipo !== 'girar') {
+      S.giroUser *= Math.exp(-dt * 2.5);
+      S.phi += (S.giro + S.giroUser) * dt;
+    }
+
+    // partículas
+    if (troca) {
+      acumuladorPart += dt * 26;
+      while (acumuladorPart > 1) { emitePart(troca); acumuladorPart--; }
+    }
+    for (let i = particulas.length - 1; i >= 0; i--) { particulas[i].t += dt; if (particulas[i].t > particulas[i].dur) particulas.splice(i, 1); }
+
+    // rastro
+    const ult = rastro[rastro.length - 1];
+    if (!ult || Math.abs(ult.e - S.eps) > 0.0004 || Math.abs(ult.T - S.T) > 0.03) {
+      rastro.push({ e: S.eps, T: S.T });
+      if (rastro.length > 700) rastro.shift();
+    }
+
+    desenha();
+    atualizaTextos();
+    desenhaPlot();
+    requestAnimationFrame(passo);
+  }
+
+  // ---------------- desenho do nanotubo ----------------
+  const itens = [];
+  for (let i = 0; i < NAT; i++) itens.push({ tipo: 0, i, d: 0 });
+  for (let k = 0; k < NLIG; k++) itens.push({ tipo: 1, i: k, d: 0 });
+  const out4 = [0, 0, 0, 0];
+
+  function desenha() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const dT = S.T - T0;
+    const nv = nivelDe(dT);
+    const [cr, cg, cb] = corPorDT(dT);
+    const sz = 1 + S.eps, sr = 1 - POISSON * S.eps;
+    const amp = reduzMovimento ? 0 : Math.max(0.02, 0.055 * (1 + dT / 5));
+    const t = S.tempo;
+
+    for (let i = 0; i < NAT; i++) {
+      let x = ax[i] * sr, y = ay[i] * sr, z = az[i] * sz;
+      if (amp) {
+        const k = i * 3;
+        x += amp * Math.sin(t * freq[k] + fase[k]);
+        y += amp * Math.sin(t * freq[k + 1] + fase[k + 1]);
+        z += amp * Math.sin(t * freq[k + 2] + fase[k + 2]);
+      }
+      projeta(x, y, z, out4);
+      PX[i] = out4[0]; PY[i] = out4[1]; PD[i] = out4[2]; PF[i] = out4[3];
+    }
+
+    // brilho em volta do tubo, proporcional a |ΔT|
+    const ex = eixoTela();
+    const intens = Math.min(1, Math.abs(dT) / (dT < 0 ? 2.8 : 8));
+    if (intens > 0.03) {
+      ctx.save();
+      ctx.lineCap = 'round';
+      const p = pontaTela(1), q = pontaTela(-1);
+      for (let k = 0; k < 12; k++) {
+        ctx.strokeStyle = `rgba(${cr},${cg},${cb},${0.022 * intens})`;
+        ctx.lineWidth = R0 * esc * (2.4 + k * 0.5);
+        ctx.beginPath(); ctx.moveTo(q[0], q[1]); ctx.lineTo(p[0], p[1]); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // garras nas pontas (atrás)
+    desenhaGarras(ex, true);
+
+    // ordena átomos e ligações por profundidade
+    for (const it of itens) it.d = it.tipo === 0 ? PD[it.i] : (PD[ligA[it.i]] + PD[ligB[it.i]]) / 2 + 0.01;
+    itens.sort((a, b) => b.d - a.d);
+
+    const rAt = 0.5 * esc, wLig = 0.22 * esc;
+    const spr = sprites[nv];
+    const corLig = `rgb(${Math.round(cr * 0.62)},${Math.round(cg * 0.62)},${Math.round(cb * 0.66)})`;
+    const prof = R0 * 1.2;
+    ctx.lineCap = 'round';
+    for (const it of itens) {
+      const a = Math.max(0.35, Math.min(1, 0.68 + 0.32 * (-it.d / prof)));
+      ctx.globalAlpha = a;
+      if (it.tipo === 1) {
+        const p = ligA[it.i], q = ligB[it.i];
+        ctx.strokeStyle = corLig;
+        ctx.lineWidth = wLig * (PF[p] + PF[q]) / 2;
+        ctx.beginPath(); ctx.moveTo(PX[p], PY[p]); ctx.lineTo(PX[q], PY[q]); ctx.stroke();
+      } else {
+        const r = rAt * PF[it.i];
+        ctx.drawImage(spr, PX[it.i] - r, PY[it.i] - r, 2 * r, 2 * r);
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    desenhaGarras(ex, false);
+
+    // partículas de calor
+    for (const p of particulas) {
+      const k = suave(Math.min(1, p.t / p.dur));
+      const r = p.r0 + (p.r1 - p.r0) * k;
+      const x = p.bx + p.nx * r, y = p.by + p.ny * r;
+      const al = Math.sin(Math.PI * Math.min(1, p.t / p.dur));
+      ctx.fillStyle = p.cor === 'frio' ? `rgba(77,157,255,${0.85 * al})` : `rgba(255,122,61,${0.85 * al})`;
+      ctx.beginPath(); ctx.arc(x, y, 3.2, 0, 6.2832); ctx.fill();
+    }
+  }
+
+  function desenhaGarras(ex, atras) {
+    const larg = R0 * esc * 2.9, esp = 12;
+    for (const sinal of [1, -1]) {
+      const p = pontaTela(sinal);
+      const nx = -ex.uy, ny = ex.ux;
+      const ux = ex.ux * sinal, uy = ex.uy * sinal;
+      if (atras) {
+        // haste que a garra segura
+        ctx.strokeStyle = 'rgba(223,227,234,0.18)'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(p[0] + ux * 26, p[1] + uy * 26); ctx.stroke();
+        continue;
+      }
+      const ativo = gesto && gesto.tipo === 'ponta' && gesto.sinal === sinal;
+      const pinca = gesto && gesto.tipo === 'pinca';
+      ctx.save();
+      ctx.translate(p[0] + ux * 4, p[1] + uy * 4);
+      ctx.rotate(Math.atan2(ny, nx));
+      const g = ctx.createLinearGradient(0, -esp, 0, esp);
+      g.addColorStop(0, '#f5f7fb'); g.addColorStop(0.5, '#aeb6c4'); g.addColorStop(1, '#6d7686');
+      ctx.fillStyle = g;
+      ctx.globalAlpha = ativo || pinca ? 1 : 0.92;
+      arredondado(-larg / 2, -esp / 2, larg, esp, 5); ctx.fill();
+      ctx.strokeStyle = 'rgba(10,14,22,0.35)'; ctx.lineWidth = 1;
+      for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(k * 6, -esp / 2 + 3); ctx.lineTo(k * 6, esp / 2 - 3); ctx.stroke(); }
+      if (ativo) { ctx.strokeStyle = 'rgba(77,157,255,0.9)'; ctx.lineWidth = 2; arredondado(-larg / 2 - 3, -esp / 2 - 3, larg + 6, esp + 6, 7); ctx.stroke(); }
+      ctx.restore();
+      // seta de dica quando parado
+      if (S.modo === 'mao' && !gesto && S.eps < 0.002 && Math.abs(S.T - T0) < 0.2) {
+        const pulso = 0.5 + 0.5 * Math.sin(S.tempo * 3.2);
+        const base = 22 + pulso * 8;
+        const bx = p[0] + ux * base, by = p[1] + uy * base;
+        ctx.save();
+        ctx.globalAlpha = 0.45 + 0.4 * pulso;
+        ctx.strokeStyle = '#eef1f7'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(bx - nx * 7 - ux * 4, by - ny * 7 - uy * 4);
+        ctx.lineTo(bx + ux * 5, by + uy * 5);
+        ctx.lineTo(bx + nx * 7 - ux * 4, by + ny * 7 - uy * 4);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+  function arredondado(x, y, w, h, r) {
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  // ---------------- textos ----------------
+  function atualizaTextos() {
+    const dT = S.T - T0;
+    tTemp.textContent = fmt(S.T) + ' K';
+    tTemp.style.color = Math.abs(dT) < 0.15 ? 'var(--ink)' : `rgb(${corPorDT(dT).join(',')})`;
+    tDelta.textContent = 'ΔT ' + (dT >= 0.05 ? '+' : '') + fmt(Math.abs(dT) < 0.05 ? 0 : dT) + ' K';
+    tEps.textContent = 'esticado ' + fmt(S.eps * 100) + ' %';
+    const pos = Math.max(0, Math.min(1, (dT + 3) / 11));
+    termoPonto.style.top = (100 - pos * 100) + '%';
+    termoPonto.style.background = `rgb(${corPorDT(dT).join(',')})`;
+    if (document.activeElement !== deform) deform.value = String(Math.round(S.eps * 1000));
+    deformOut.textContent = fmt(S.eps * 100) + ' %';
+
+    let msg = '', cls = '';
+    if (S.modo === 'ciclo') {
+      if (S.ciclo.rodando) { const et = ETAPAS[S.ciclo.etapa]; msg = et.msg; cls = et.cls; }
+      else msg = 'Ciclo pausado · arraste para girar';
+    } else {
+      const taxa = S.taxa;
+      if (taxa > 0.02) { msg = S.picoTaxa > 0.15 ? 'Esticando rápido: ele esfria' : 'Devagar, ele troca calor e esfria menos'; cls = 'frio'; }
+      else if (taxa < -0.02) { msg = 'Voltando: ele esquenta'; cls = 'quente'; }
+      else if (S.eps > 0.005 && dT < -0.3) { msg = 'Segurando: ele absorve calor e volta a 300 K'; cls = 'frio'; }
+      else if (dT > 0.3) { msg = 'Agora ele devolve o calor ao ambiente'; cls = 'quente'; }
+      else if (S.eps > 0.005) msg = 'Solte e veja ele esquentar';
+      else msg = vertical ? 'Puxe as pontas (ou abra dois dedos) para esticar' : 'Puxe as pontas para esticar · arraste o meio para girar';
+    }
+    if (msg !== S.ultimaMsg) {
+      S.ultimaMsg = msg; dica.textContent = msg;
+      dica.classList.toggle('frio', cls === 'frio'); dica.classList.toggle('quente', cls === 'quente');
+    }
+  }
+
+  // ---------------- gráfico T × ε ----------------
+  function desenhaPlot() {
+    const w = plot.width / dpr, h = plot.height / dpr;
+    if (!w || !h) return;
+    pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pctx.clearRect(0, 0, w, h);
+    const ml = 34, mr = 8, mt = 6, mb = 18;
+    const X = e => ml + (e / EPS_MAX) * (w - ml - mr);
+    const Tmin = 296.5, Tmax = 309;
+    const Y = T => mt + (1 - (Math.max(Tmin, Math.min(Tmax, T)) - Tmin) / (Tmax - Tmin)) * (h - mt - mb);
+    pctx.font = '10px ui-monospace, Menlo, monospace';
+    pctx.fillStyle = '#7d879a';
+    pctx.strokeStyle = 'rgba(255,255,255,0.12)'; pctx.lineWidth = 1;
+    pctx.beginPath(); pctx.moveTo(ml, mt); pctx.lineTo(ml, h - mb); pctx.lineTo(w - mr, h - mb); pctx.stroke();
+    pctx.setLineDash([4, 4]); pctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    pctx.beginPath(); pctx.moveTo(ml, Y(300)); pctx.lineTo(w - mr, Y(300)); pctx.stroke(); pctx.setLineDash([]);
+    pctx.textAlign = 'right'; pctx.textBaseline = 'middle';
+    pctx.fillText('300', ml - 4, Y(300)); pctx.fillText('308', ml - 4, Y(308)); pctx.fillText('297', ml - 4, Y(297));
+    pctx.textAlign = 'center'; pctx.textBaseline = 'top';
+    pctx.fillText('0 %', X(0) + 8, h - mb + 4); pctx.fillText('10 %', X(EPS_MAX) - 10, h - mb + 4);
+    pctx.fillText('esticado →', (X(0) + X(EPS_MAX)) / 2, h - mb + 4);
+    pctx.save(); pctx.translate(9, (mt + h - mb) / 2); pctx.rotate(-Math.PI / 2); pctx.textBaseline = 'middle'; pctx.fillText('T (K)', 0, 0); pctx.restore();
+
+    const n = rastro.length;
+    pctx.lineWidth = 2; pctx.lineCap = 'round';
+    for (let i = 1; i < n; i++) {
+      const a = rastro[i - 1], b = rastro[i];
+      const c = corPorDT((a.T + b.T) / 2 - T0);
+      pctx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},${0.15 + 0.85 * (i / n)})`;
+      pctx.beginPath(); pctx.moveTo(X(a.e), Y(a.T)); pctx.lineTo(X(b.e), Y(b.T)); pctx.stroke();
+    }
+    const c = corPorDT(S.T - T0);
+    pctx.fillStyle = `rgb(${c.join(',')})`;
+    pctx.beginPath(); pctx.arc(X(S.eps), Y(S.T), 4.5, 0, 6.2832); pctx.fill();
+    pctx.strokeStyle = '#0a0e16'; pctx.lineWidth = 1.5; pctx.stroke();
+  }
+
+  // ---------------- folha de informação ----------------
+  const folha = $('folha'), infoBtn = $('infoBtn');
+  function abreFolha() { folha.hidden = false; $('fecharFolha').focus(); }
+  function fechaFolha() { folha.hidden = true; infoBtn.focus(); }
+  infoBtn.addEventListener('click', abreFolha);
+  $('fecharFolha').addEventListener('click', fechaFolha);
+  folha.addEventListener('click', e => { if (e.target === folha) fechaFolha(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !folha.hidden) fechaFolha(); });
+
+  // pausa quando a aba não está visível
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) rodando = false;
+    else if (!rodando) { rodando = true; ultimo = performance.now(); requestAnimationFrame(passo); }
+  });
+
+  redimensiona();
+  requestAnimationFrame(passo);
+})();
+</script>
+</body>
+</html>

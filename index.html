@@ -184,6 +184,34 @@
     color: var(--ink-muted);
     margin: 0;
   }
+  a.sim-card {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 2px solid transparent;
+    background:
+      linear-gradient(var(--card), var(--card)) padding-box,
+      linear-gradient(135deg, var(--blue), var(--orange)) border-box;
+    text-decoration: none;
+    color: var(--ink);
+    transition: transform 0.12s ease;
+  }
+  a.sim-card:hover { transform: translateY(-1px); }
+  .sim-art {
+    width: 76px; height: 56px; border-radius: 10px;
+    background: #0a0e16;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sim-art svg { width: 64px; height: 40px; }
+  .sim-kicker {
+    margin: 0 0 2px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--blue);
+  }
+  .sim-title { margin: 0; font-size: 16px; font-weight: 700; }
+  .sim-sub { margin: 3px 0 0; font-size: 13px; color: var(--ink-secondary); line-height: 1.4; }
   footer {
     margin-top: 44px;
     text-align: center;
@@ -206,6 +234,31 @@
       estado sólido na nanoescala. Orientação: Prof. Dr. Alexandre Fontes da Fonseca.
     </p>
   </header>
+
+  <section>
+    <a class="sim-card" href="simulador.html">
+      <div class="sim-art" aria-hidden="true">
+        <svg viewBox="0 0 64 40">
+          <defs>
+            <linearGradient id="simg" x1="0" x2="1">
+              <stop offset="0" stop-color="#4d9dff"/>
+              <stop offset="1" stop-color="#ff7a3d"/>
+            </linearGradient>
+          </defs>
+          <rect x="4" y="13" width="56" height="14" rx="7" fill="none" stroke="url(#simg)" stroke-width="2"/>
+          <path d="M10 13v14M17 13v14M24 13v14M31 13v14M38 13v14M45 13v14M52 13v14" stroke="url(#simg)" stroke-width="1.2" opacity="0.7"/>
+          <rect x="1" y="9" width="4" height="22" rx="1.5" fill="#dfe3ea"/>
+          <rect x="59" y="9" width="4" height="22" rx="1.5" fill="#dfe3ea"/>
+        </svg>
+      </div>
+      <div class="link-text">
+        <p class="sim-kicker">Interativo</p>
+        <p class="sim-title">Estique o nanotubo</p>
+        <p class="sim-sub">Puxe com os dedos e veja ele esfriar, ou rode o ciclo da geladeira.</p>
+      </div>
+      <div class="arrow">→</div>
+    </a>
+  </section>
 
   <section>
     <p class="section-label">Contato</p>
