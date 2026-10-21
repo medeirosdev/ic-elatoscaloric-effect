@@ -193,7 +193,7 @@
   <section class="painel" aria-label="Controles">
     <div class="modos" role="tablist" aria-label="Modo">
       <button type="button" role="tab" id="abaMao" aria-selected="true" aria-controls="painelMao">Com as mãos</button>
-      <button type="button" role="tab" id="abaCiclo" aria-selected="false" aria-controls="painelCiclo">Ciclo geladeira</button>
+      <button type="button" role="tab" id="abaCiclo" aria-selected="false" aria-controls="painelCiclo">Ciclo de refrigeração</button>
     </div>
 
     <div class="linha-2">
@@ -207,7 +207,7 @@
       </div>
 
       <div class="bloco" id="painelCiclo" role="tabpanel" aria-labelledby="abaCiclo" hidden>
-        <h2>Ciclo de refrigeração</h2>
+        <h2>Os 4 passos</h2>
         <ol class="etapas" id="etapas">
           <li class="frio"><span class="n">1→2</span><span><b>Estica rápido:</b> esfria</span></li>
           <li class="frio"><span class="n">2→3</span><span><b>Absorve calor</b> do que se quer gelar</span></li>
@@ -235,8 +235,8 @@
     <p>Um <b>nanotubo de carbono</b>: uma folha de átomos de carbono, com um átomo de espessura, enrolada como um canudo. Este tem a geometria real do que estudei na Iniciação Científica: <b>504 átomos</b>, 5,1 nm de comprimento e 0,81 nm de diâmetro, cerca de cem mil vezes mais fino que um fio de cabelo.</p>
     <h3>O efeito elastocalórico</h3>
     <p>Quando você estica um elástico rápido, ele esquenta. O nanotubo faz o contrário: <span class="f">esfria quando é esticado</span> e <span class="q">esquenta quando volta</span>. Rápido é a palavra-chave: se você esticar devagar, ele tem tempo de trocar calor com o ambiente e quase não esfria.</p>
-    <h3>A geladeira de nanotubo</h3>
-    <p>No modo <b>Ciclo geladeira</b>, o nanotubo repete quatro passos: estica e esfria, absorve calor do que se quer resfriar, solta e esquenta, joga esse calor fora. É o princípio de uma geladeira comum, trocando o gás pelo nanotubo, sem gases que aquecem o planeta.</p>
+    <h3>O refrigerador de nanotubo</h3>
+    <p>No modo <b>Ciclo de refrigeração</b>, o nanotubo repete quatro passos: estica e esfria, absorve calor do que se quer resfriar, solta e esquenta, joga esse calor fora. É o princípio de uma geladeira comum, trocando o gás pelo nanotubo, sem gases que aquecem o planeta.</p>
     <h3>Quanto disso é real?</h3>
     <p>A geometria é real. As temperaturas seguem um <b>modelo simplificado</b>, calibrado pelas médias das 9 simulações de dinâmica molecular do projeto: esticar 10 % rapidamente esfria <span class="f">2,8 K</span>, e contrair aquece <span class="q">8,0 K</span>. As cores e a agitação dos átomos estão exageradas para ficarem visíveis. As simulações de verdade calculam as forças entre todos os átomos (programa LAMMPS, potencial AIREBO) e levam cerca de 2 horas de computador por ciclo; esta página só ilustra o resultado.</p>
     <p>Projeto de Iniciação Científica no IFGW/Unicamp, orientado pelo Prof. Dr. Alexandre Fontes da Fonseca. <a href="files/resumo-congresso-ic-2026.pdf">Ler o resumo (PDF)</a>.</p>
@@ -747,7 +747,7 @@
     pctx.fillText('300', ml - 4, Y(300)); pctx.fillText('308', ml - 4, Y(308)); pctx.fillText('297', ml - 4, Y(297));
     pctx.textAlign = 'center'; pctx.textBaseline = 'top';
     pctx.fillText('0 %', X(0) + 8, h - mb + 4); pctx.fillText('10 %', X(EPS_MAX) - 10, h - mb + 4);
-    pctx.fillText('esticado →', (X(0) + X(EPS_MAX)) / 2, h - mb + 4);
+    if (w > 240) pctx.fillText('esticado →', (X(0) + X(EPS_MAX)) / 2, h - mb + 4);
     pctx.save(); pctx.translate(9, (mt + h - mb) / 2); pctx.rotate(-Math.PI / 2); pctx.textBaseline = 'middle'; pctx.fillText('T (K)', 0, 0); pctx.restore();
 
     const n = rastro.length;
